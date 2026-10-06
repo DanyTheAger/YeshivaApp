@@ -1,0 +1,13 @@
+{
+  "background_color": "#ffffff",
+  "dir": "ltr",
+  "display": "standalone",
+  "name": "Yeshiva App",
+  "orientation": "any",
+  "scope": "/",
+  "short_name": "Yeshiva",
+  "start_url": "/",
+  "theme_color": "#ffffff",
+  "id": "YApp",
+  "description": "App for lessons in Yeshiva"
+}
