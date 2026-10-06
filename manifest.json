@@ -1,13 +1,15 @@
 {
-  "background_color": "#ffffff",
-  "dir": "ltr",
+  "name": "Ешива Портал",
+  "short_name": "Ешива",
+  "start_url": "/YeshivaApp/",
   "display": "standalone",
-  "name": "Yeshiva App",
-  "orientation": "any",
-  "scope": "/",
-  "short_name": "Yeshiva",
-  "start_url": "/",
-  "theme_color": "#ffffff",
-  "id": "YApp",
-  "description": "App for lessons in Yeshiva"
+  "background_color": "#ffffff",
+  "theme_color": "#2563eb",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/3135/3135715.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
 }
