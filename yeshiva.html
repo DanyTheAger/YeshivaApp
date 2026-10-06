@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="ru" dir="ltr" id="html-root">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Yeshiva Cloud — Интеллектуальный Портал</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Подключаем Firebase совместимые библиотеки -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+    <style>
+        :root {
+            --bg-body: #f8fafc;
+            --surface: #ffffff;
+            --surface-sub: #f1f5f9;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --primary: #b8860b;
+            --primary-hover: #996f09;
+            --primary-light: #fdf8e2;
+            --border: #e2e8f0;
+            --radius-sm: 12px;
+            --radius: 20px;
+            --radius-lg: 28px;
+            --shadow-subtle: 0 4px 20px -2px rgba(15, 23, 42, 0.04);
+            --shadow-card: 0 10px 30px -5px rgba(15, 23, 42, 0.06);
+            --danger: #dc2626;
+            --danger-bg: #fef2f2;
+            --success: #16a34a;
+            --success-bg: #f0fdf4;
+            --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Plus Jakarta Sans', sans-serif; }
+        body { background-color: var(--bg-body); color: var(--text-main); min-height: 100vh; padding-bottom: 60px; -webkit-font-smoothing: antialiased; }
+
+        #loading-screen {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: var(--bg-body);
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-muted);
+            gap: 12px;
+        }
+
+        #auth-screen {
+            display: none;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 24px;
+            background: radial-gradient(circle at top right, #fef9ec 0%, #f8fafc 70%);
+        }
+        .auth-card {
+            background: var(--surface);
+            padding: 48px 36px;
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-card);
+            width: 100%;
+            max-width: 440px;
+            border: 1px solid var(--border);
+        }
+        .auth-card h2 { margin-bottom: 24px; font-size: 26px; font-weight: 700; text-align: center; }
+
+        #app-screen { display: none; }
+        
+        header { 
+            background: #0b1329; 
+            color: white; 
+            padding: 20px 32px; 
+            position: sticky; 
+            top: 0; 
+            z-index: 100; 
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+        .header-container { max-width: 1200px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; }
+        
+        main { max-width: 1200px; margin: 36px auto; padding: 0 24px; }
+        
+        .card { 
+            background: var(--surface); 
+            border-radius: var(--radius); 
+            padding: 32px; 
+            box-shadow: var(--shadow-subtle); 
+            border: 1px solid var(--border); 
+            margin-bottom: 28px; 
+        }
+        .card h2 { font-size: 20px; font-weight: 700; color: var(--text-main); margin-bottom: 6px; }
+        
+        .btn { 
+            background: var(--primary); 
+            color: white; 
+            border: none; 
+            padding: 14px 20px; 
+            border-radius: var(--radius-sm); 
+            font-size: 14px; 
+            font-weight: 600; 
+            cursor: pointer; 
+            transition: var(--transition); 
+            width: 100%; 
+            margin-top: 14px;
+            box-shadow: 0 4px 14px rgba(184, 134, 11, 0.25);
+        }
+        .btn:hover { background: var(--primary-hover); transform: translateY(-2px); }
+        
+        .btn-secondary { 
+            background: var(--surface-sub); 
+            color: var(--text-main); 
+            border: 1px solid var(--border); 
+            box-shadow: none;
+        }
+        .btn-secondary:hover { background: #e2e8f0; transform: none; }
+        
+        .btn-danger { 
+            background: var(--danger-bg); 
+            color: var(--danger); 
+            border: 1px solid rgba(220, 38, 38, 0.2);
+            width: auto; 
+            margin: 0; 
+            padding: 8px 14px; 
+            font-size: 12px; 
+            box-shadow: none;
+        }
+        .btn-danger:hover { background: var(--danger); color: white; }
+
+        .btn-zoom { 
+            background: #eff6ff; 
+            color: #1d4ed8;
+            border: 1px solid rgba(29, 78, 216, 0.15);
+            display: inline-flex; 
+            align-items: center; 
+            gap: 8px; 
+            text-decoration: none; 
+            padding: 10px 16px; 
+            border-radius: var(--radius-sm); 
+            font-size: 13px; 
+            font-weight: 600; 
+            transition: var(--transition);
+        }
+        .btn-zoom:hover { background: #1d4ed8; color: white; }
+        
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; font-size: 12px; font-weight: 700; color: var(--text-muted); margin-bottom: 8px; text-transform: uppercase; }
+        .form-control { 
+            width: 100%; 
+            padding: 14px 18px; 
+            border: 1px solid var(--border); 
+            border-radius: var(--radius-sm); 
+            font-size: 14px; 
+            outline: none; 
+            background: var(--surface-sub); 
+            color: var(--text-main);
+        }
+        .form-control:focus { border-color: var(--primary); background: var(--surface); box-shadow: 0 0 0 4px rgba(184, 134, 11, 0.1); }
+        
+        .hidden { display: none !important; }
+        
+        .badge { 
+            background: var(--primary-light); 
+            color: var(--primary); 
+            padding: 6px 12px; 
+            border-radius: 30px; 
+            font-size: 12px; 
+            font-weight: 700; 
+        }
+        
+        #error-msg { color: var(--danger); font-size: 13px; margin-top: 14px; text-align: center; font-weight: 500; }
+        
+        .nav-tabs { display: flex; gap: 10px; margin-bottom: 28px; background: var(--surface); padding: 8px; border-radius: var(--radius); border: 1px solid var(--border); flex-wrap: wrap; }
+        .tab-btn { 
+            flex: 1; 
+            min-width: 150px;
+            padding: 14px; 
+            background: transparent; 
+            border: none; 
+            border-radius: var(--radius-sm); 
+            font-weight: 600; 
+            font-size: 14px; 
+            cursor: pointer; 
+            color: var(--text-muted); 
+            text-align: center; 
+        }
+        .tab-btn.active { background: #0f172a; color: white; }
+
+        .table-responsive { width: 100%; overflow-x: auto; border-radius: var(--radius-sm); border: 1px solid var(--border); }
+        table { width: 100%; border-collapse: collapse; font-size: 14px; background: var(--surface); }
+        th, td { padding: 18px; border-bottom: 1px solid var(--border); vertical-align: middle; text-align: left; }
+        th { background: var(--surface-sub); font-weight: 700; color: var(--text-muted); text-transform: uppercase; font-size: 11px; }
+        
+        .status-toggle { 
+            cursor: pointer; 
+            padding: 8px 12px; 
+            border-radius: 10px; 
+            font-size: 12px; 
+            font-weight: 700; 
+            border: 1px solid transparent; 
+        }
+        .status-present { background: var(--success-bg); color: var(--success); border-color: rgba(22, 163, 74, 0.2); }
+        .status-absent { background: var(--danger-bg); color: var(--danger); border-color: rgba(220, 38, 38, 0.2); }
+
+        .lesson-card-item {
+            padding: 24px; 
+            background: var(--surface); 
+            border-radius: var(--radius); 
+            margin-bottom: 20px; 
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow-subtle);
+        }
+
+        .video-container {
+            position: relative;
+            width: 100%;
+            padding-bottom: 56.25%;
+            background: #000;
+            border-radius: var(--radius-sm);
+            overflow: hidden;
+            margin-top: 16px;
+        }
+        .video-container iframe, .video-container video {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%; border: none;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ЭКРАН ЗАГРУЗКИ (чтобы не было белого экрана) -->
+    <div id="loading-screen">
+        <div>Загрузка Yeshiva Cloud...</div>
+    </div>
+
+    <!-- ЭКРАН АВТОРИЗАЦИИ -->
+    <div id="auth-screen">
+        <div class="auth-card">
+            <div style="display:flex; justify-content:flex-end; margin-bottom:14px;">
+                <select id="lang-switcher-auth" class="form-control" style="width: auto; padding: 6px 12px; font-size: 12px;" onchange="changeLanguage(this.value)">
+                    <option value="ru">Русский</option>
+                    <option value="uk">Українська</option>
+                    <option value="en">English</option>
+                    <option value="he">עברית</option>
+                </select>
+            </div>
+            <h2 id="t-portal-title">Ешива Портал</h2>
+            <div class="form-group">
+                <label id="t-label-email">Email</label>
+                <input type="email" id="auth-email" class="form-control" placeholder="teacher@yeshiva.org">
+            </div>
+            <div class="form-group">
+                <label id="t-label-pass">Пароль</label>
+                <input type="password" id="auth-password" class="form-control" placeholder="••••••••">
+            </div>
+            <div class="form-group">
+                <label id="t-label-role">Роль в системе</label>
+                <select id="auth-role" class="form-control">
+                    <option value="teacher" id="t-role-teacher">Преподаватель (Рав)</option>
+                    <option value="student" id="t-role-student">Ученик (Бахур)</option>
+                </select>
+            </div>
+            <button class="btn" id="t-btn-login" onclick="handleLogin()">Войти в кабинет</button>
+            <button class="btn btn-secondary" id="t-btn-reg" onclick="handleRegister()" style="margin-top: 10px;">Зарегистрироваться</button>
+            <div id="error-msg"></div>
+        </div>
+    </div>
+
+    <!-- ОСНОВНОЙ ИНТЕРФЕЙС -->
+    <div id="app-screen">
+        <header>
+            <div class="header-container">
+                <div style="display: flex; align-items: center; gap: 14px; flex-wrap: wrap;">
+                    <h1 id="user-title" style="font-size: 16px; font-weight: 600;">Кабинет</h1>
+                    <span id="user-role-badge" class="badge">Роль</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <select id="lang-switcher-app" class="form-control" style="width: auto; padding: 6px 12px; font-size: 12px; background: rgba(255,255,255,0.1); color: white; border-color: rgba(255,255,255,0.2);" onchange="changeLanguage(this.value)">
+                        <option value="ru" style="color:black;">Русский</option>
+                        <option value="uk" style="color:black;">Українська</option>
+                        <option value="en" style="color:black;">English</option>
+                        <option value="he" style="color:black;">עברית</option>
+                    </select>
+                    <button class="btn btn-secondary" id="t-btn-logout" onclick="handleLogout()" style="width: auto; padding: 8px 16px; font-size: 12px; margin: 0; background: rgba(255,255,255,0.06); color: white;">Выйти</button>
+                </div>
+            </div>
+        </header>
+
+        <main>
+            <!-- КАБИНЕТ ПРЕПОДАВАТЕЛЯ -->
+            <div id="teacher-dashboard" class="hidden">
+                <div class="nav-tabs">
+                    <button id="tab-create-btn" class="tab-btn active" onclick="switchTeacherTab('create')">➕ <span id="t-tab-create">Уроки</span></button>
+                    <button id="tab-journal-btn" class="tab-btn" onclick="switchTeacherTab('journal')">📊 <span id="t-tab-journal">Журнал</span></button>
+                    <button id="tab-students-btn" class="tab-btn" onclick="switchTeacherTab('students')">👥 <span id="t-tab-students">Ученики</span></button>
+                </div>
+
+                <div id="teacher-tab-create" class="card">
+                    <h2 id="t-plan-title">Запланировать новый урок</h2>
+                    <p id="t-plan-desc" style="font-size: 13px; color: var(--text-muted); margin-bottom: 20px;">Укажите данные для запуска онлайн-занятия.</p>
+                    
+                    <div class="form-group">
+                        <label id="t-lbl-subj">Предмет / Седер</label>
+                        <input type="text" id="t-title" class="form-control" placeholder="Например: Гмара Бава Меция">
+                    </div>
+                    <div class="form-group">
+                        <label id="t-lbl-topic">Тема урока</label>
+                        <input type="text" id="t-topic" class="form-control" placeholder="Например: Лист 47">
+                    </div>
+                    <div class="form-group">
+                        <label id="t-lbl-zoom">Ссылка на Zoom или видеопоток</label>
+                        <input type="text" id="t-zoom" class="form-control" placeholder="https://zoom.us/j/... или ссылка на YouTube">
+                    </div>
+                    <button class="btn" id="t-btn-publish" onclick="saveTeacherLesson()">Опубликовать и начать урок</button>
+
+                    <div style="margin: 40px 0 24px 0; border-top: 1px solid var(--border);"></div>
+
+                    <h2 id="t-active-title">Активные уроки в реальном времени</h2>
+                    <div id="teacher-active-lessons-box">Загрузка...</div>
+                </div>
+
+                <div id="teacher-tab-journal" class="card hidden">
+                    <h2 id="t-journal-title">Архив и таблица посещаемости</h2>
+                    <div class="table-responsive">
+                        <div id="teacher-lessons-table-container">Загрузка...</div>
+                    </div>
+                </div>
+
+                <div id="teacher-tab-students" class="card hidden">
+                    <h2 id="t-students-title">Список учеников и статистика</h2>
+                    <div class="table-responsive">
+                        <div id="teacher-students-table-container">Загрузка...</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- КАБИНЕТ УЧЕНИКА -->
+            <div id="student-dashboard" class="hidden">
+                <div class="card">
+                    <h2 id="t-stud-schedule">Расписание и текущие уроки</h2>
+                    <div id="student-active-lessons">Загрузка...</div>
+                </div>
+
+                <div class="card">
+                    <h2 id="t-stud-archive">Архив пройденного материала</h2>
+                    <div id="student-archive-lessons">Загрузка...</div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        const translations = {
+            ru: {
+                portalTitle: "Ешива Портал", email: "Email", password: "Пароль", roleSystem: "Роль в системе",
+                teacherRole: "Преподаватель (Рав)", studentRole: "Ученик (Бахур)", loginBtn: "Войти в кабинет",
+                regBtn: "Зарегистрироваться", logoutBtn: "Выйти", tabCreate: "Уроки", tabJournal: "Журнал",
+                tabStudents: "Ученики", planTitle: "Запланировать новый урок", planDesc: "Укажите данные для запуска.",
+                lblSubj: "Предмет / Седер", lblTopic: "Тема урока", lblZoom: "Ссылка на Zoom / Видеотрансляцию",
+                btnPublish: "Опубликовать и начать урок", activeTitle: "Активные уроки в реальном времени",
+                journalTitle: "Архив и таблица посещаемости", studentsTitle: "Список учеников",
+                studSchedule: "Расписание и текущие уроки", studArchive: "Архив пройденного материала",
+                roleTeacherBadge: "Преподаватель", roleStudentBadge: "Ученик", noActiveLessons: "Сейчас нет активных уроков.",
+                emptyJournal: "Журнал пуст.", emptySchedule: "Расписание пока пусто.", emptyArchive: "Архив пуст.",
+                present: "Присутствует ✓", absent: "Отсутствует ✗", finishBtn: "Закончить урок", deleteBtn: "Удалить",
+                zoomBtn: "Открыть Zoom / Трансляцию", connectZoom: "Смотреть трансляцию", watchRecord: "Смотреть запись",
+                confirmFinish: "Завершить урок?", confirmDelete: "Удалить этот урок?"
+            },
+            uk: {
+                portalTitle: "Єшива Портал", email: "Email", password: "Пароль", roleSystem: "Роль у системі",
+                teacherRole: "Викладач (Рав)", studentRole: "Учень (Бахур)", loginBtn: "Увійти в кабінет",
+                regBtn: "Зареєструватися", logoutBtn: "Вийти", tabCreate: "Уроки", tabJournal: "Журнал",
+                tabStudents: "Учні", planTitle: "Запланувати новий урок", planDesc: "Вкажіть дані для запуску.",
+                lblSubj: "Предмет / Седер", lblTopic: "Тема уроку", lblZoom: "Посилання на Zoom / Трансляцію",
+                btnPublish: "Опублікувати та почати", activeTitle: "Активні уроки в реальному часі",
+                journalTitle: "Архів та таблиця відвідуваності", studentsTitle: "Список учнів",
+                studSchedule: "Розклад та поточні уроки", studArchive: "Архів пройденого матеріалу",
+                roleTeacherBadge: "Викладач", roleStudentBadge: "Учень", noActiveLessons: "Зараз немає активних уроків.",
+                emptyJournal: "Журнал порожній.", emptySchedule: "Розклад порожній.", emptyArchive: "Архів порожній.",
+                present: "Присутній ✓", absent: "Відсутній ✗", finishBtn: "Закінчити", deleteBtn: "Видалити",
+                zoomBtn: "Відкрити Zoom / Трансляцію", connectZoom: "Дивитися трансляцію", watchRecord: "Дивитися запис",
+                confirmFinish: "Завершити урок?", confirmDelete: "Видалити цей урок?"
+            },
+            en: {
+                portalTitle: "Yeshiva Portal", email: "Email", password: "Password", roleSystem: "System Role",
+                teacherRole: "Teacher (Rav)", studentRole: "Student (Bahur)", loginBtn: "Sign In",
+                regBtn: "Register", logoutBtn: "Log Out", tabCreate: "Lessons", tabJournal: "Journal",
+                tabStudents: "Students", planTitle: "Schedule New Lesson", planDesc: "Enter details to start.",
+                lblSubj: "Subject / Seder", lblTopic: "Lesson Topic", lblZoom: "Zoom / Stream Link",
+                btnPublish: "Publish & Start", activeTitle: "Active Lessons", journalTitle: "Archive & Attendance",
+                studentsTitle: "Student List", studSchedule: "Schedule", studArchive: "Archive",
+                roleTeacherBadge: "Teacher", roleStudentBadge: "Student", noActiveLessons: "No active lessons.",
+                emptyJournal: "Journal is empty.", emptySchedule: "Schedule is empty.", emptyArchive: "Archive is empty.",
+                present: "Present ✓", absent: "Absent ✗", finishBtn: "End Lesson", deleteBtn: "Delete",
+                zoomBtn: "Open Stream", connectZoom: "Watch Stream", watchRecord: "Watch Recording",
+                confirmFinish: "End lesson?", confirmDelete: "Delete lesson?"
+            },
+            he: {
+                portalTitle: "פורטל ישיבה", email: "אימייל", password: "סיסמה", roleSystem: "תפקיד במערכת",
+                teacherRole: "מורה", studentRole: "תלמיד", loginBtn: "התחבר", regBtn: "הרשמה", logoutBtn: "יציאה",
+                tabCreate: "שיעורים", tabJournal: "יומן", tabStudents: "תלמידים", planTitle: "תכנון שיעור",
+                planDesc: "הזן פרטים", lblSubj: "מקצוע", lblTopic: "נושא", lblZoom: "קישור", btnPublish: "פרסם",
+                activeTitle: "שיעורים פעילים", journalTitle: "יומן נוכחות", studentsTitle: "תלמידים",
+                studSchedule: "מערכת שעות", studArchive: "ארכיון", roleTeacherBadge: "מורה", roleStudentBadge: "תלמיד",
+                noActiveLessons: "אין שיעורים פעילים.", emptyJournal: "יומן ריק.", emptySchedule: "לוח זמנים ריק.",
+                emptyArchive: "ארכיון ריק.", present: "נוכח ✓", absent: "נעדר ✗", finishBtn: "סיום", deleteBtn: "מחיקה",
+                zoomBtn: "פתח שידור", connectZoom: "צפה בשידור", watchRecord: "צפה בהקלטה",
+                confirmFinish: "لסיים?", confirmDelete: "למחוק?"
+            }
+        };
+
+        let currentLang = 'ru';
+        function t(key) { return translations[currentLang][key] || translations['ru'][key] || key; }
+
+        function changeLanguage(lang) {
+            currentLang = lang;
+            const htmlRoot = document.getElementById('html-root');
+            htmlRoot.setAttribute('lang', lang);
+            htmlRoot.setAttribute('dir', lang === 'he' ? 'rtl' : 'ltr');
+            document.getElementById('lang-switcher-auth').value = lang;
+            document.getElementById('lang-switcher-app').value = lang;
+            
+            document.getElementById('t-portal-title').innerText = t('portalTitle');
+            document.getElementById('t-label-email').innerText = t('email');
+            document.getElementById('t-label-pass').innerText = t('password');
+            document.getElementById('t-label-role').innerText = t('roleSystem');
+            document.getElementById('t-role-teacher').innerText = t('teacherRole');
+            document.getElementById('t-role-student').innerText = t('studentRole');
+            document.getElementById('t-btn-login').innerText = t('loginBtn');
+            document.getElementById('t-btn-reg').innerText = t('regBtn');
+            document.getElementById('t-btn-logout').innerText = t('logoutBtn');
+        }
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCD1IjEsAyloXM9EP8dwmwUpqJ459Vk6y0",
+            authDomain: "yeshivaorahhaim.firebaseapp.com",
+            projectId: "yeshivaorahhaim",
+            storageBucket: "yeshivaorahhaim.firebasestorage.app",
+            messagingSenderId: "851277176684",
+            appId: "1:851277176684:web:1d7140c0d638f62e305d49",
+            measurementId: "G-LKFSPG8W39"
+        };
+
+        try {
+            if (!firebase.apps.length) {
+                firebase.initializeApp(firebaseConfig);
+            }
+        } catch (e) {
+            console.error("Firebase init error:", e);
+        }
+
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+        const errorDiv = document.getElementById('error-msg');
+        function showError(text) { errorDiv.innerText = text; }
+
+        let globalUser = null;
+
+        // Прямое отслеживание состояния сессии с переключением экранов
+        auth.onAuthStateChanged(async (user) => {
+            document.getElementById('loading-screen').style.display = 'none';
+            if (user) {
+                await enterApp(user);
+            } else {
+                document.getElementById('auth-screen').style.display = 'flex';
+                document.getElementById('app-screen').style.display = 'none';
+            }
+        });
+
+        async function enterApp(user) {
+            globalUser = user;
+            document.getElementById('auth-screen').style.display = 'none';
+            document.getElementById('app-screen').style.display = 'block';
+            
+            let role = 'student';
+            try {
+                const userDoc = await db.collection('users').doc(user.uid).get();
+                if (userDoc.exists && userDoc.data().role) {
+                    role = userDoc.data().role;
+                }
+            } catch (e) {
+                console.log('Using default role');
+            }
+
+            if (role === 'teacher') {
+                document.getElementById('teacher-dashboard').classList.remove('hidden');
+                document.getElementById('student-dashboard').classList.add('hidden');
+                document.getElementById('user-role-badge').innerText = t('roleTeacherBadge');
+                loadTeacherData();
+            } else {
+                document.getElementById('student-dashboard').classList.remove('hidden');
+                document.getElementById('teacher-dashboard').classList.add('hidden');
+                document.getElementById('user-role-badge').innerText = t('roleStudentBadge');
+                loadLessonsForStudent();
+            }
+            document.getElementById('user-title').innerText = user.email;
+        }
+
+        async function handleLogin() {
+            showError('');
+            const email = document.getElementById('auth-email').value.trim();
+            const pass = document.getElementById('auth-password').value.trim();
+            if (!email || !pass) { showError('Заполните все поля'); return; }
+            try {
+                await auth.signInWithEmailAndPassword(email, pass);
+            } catch (err) {
+                showError('Ошибка входа: ' + err.message);
+            }
+        }
+
+        async function handleRegister() {
+            showError('');
+            const email = document.getElementById('auth-email').value.trim();
+            const pass = document.getElementById('auth-password').value.trim();
+            const role = document.getElementById('auth-role').value;
+            if (!email || !pass) { showError('Заполните все поля'); return; }
+            try {
+                const res = await auth.createUserWithEmailAndPassword(email, pass);
+                await db.collection('users').doc(res.user.uid).set({ email, role });
+            } catch (err) {
+                showError('Ошибка регистрации: ' + err.message);
+            }
+        }
+
+        function handleLogout() {
+            auth.signOut().then(() => { window.location.reload(); });
+        }
+
+        function switchTeacherTab(tabName) {
+            ['create', 'journal', 'students'].forEach(name => {
+                document.getElementById(`teacher-tab-${name}`).classList.add('hidden');
+                document.getElementById(`tab-${name}-btn`).classList.remove('active');
+            });
+            document.getElementById(`teacher-tab-${tabName}`).classList.remove('hidden');
+            document.getElementById(`tab-${tabName}-btn`).classList.add('active');
+
+            if (tabName === 'create') loadTeacherData();
+            if (tabName === 'journal') loadTeacherTable();
+            if (tabName === 'students') loadStudentsTable();
+        }
+
+        async function saveTeacherLesson() {
+            const title = document.getElementById('t-title').value.trim();
+            const topic = document.getElementById('t-topic').value.trim();
+            const zoom = document.getElementById('t-zoom').value.trim();
+            if (!title) return alert('Введите название предмета');
+
+            try {
+                const studentsSnap = await db.collection('users').where('role', '==', 'student').get();
+                let attendance = {};
+                studentsSnap.forEach(doc => {
+                    attendance[doc.id] = { email: doc.data().email, present: false };
+                });
+
+                await db.collection('lessons').add({
+                    title, topic, zoom, record: '', status: 'active', attendance,
+                    startTime: firebase.firestore.FieldValue.serverTimestamp(), endTime: null
+                });
+                alert('Успешно создано!');
+                document.getElementById('t-title').value = '';
+                document.getElementById('t-topic').value = '';
+                document.getElementById('t-zoom').value = '';
+                loadTeacherData();
+            } catch (err) {
+                alert('Ошибка: ' + err.message);
+            }
+        }
+
+        async function finishLesson(lessonId) {
+            if (!confirm(t('confirmFinish'))) return;
+            await db.collection('lessons').doc(lessonId).update({ 
+                status: 'finished', endTime: firebase.firestore.FieldValue.serverTimestamp() 
+            });
+            loadTeacherData();
+        }
+
+        async function deleteLesson(lessonId) {
+            if (!confirm(t('confirmDelete'))) return;
+            await db.collection('lessons').doc(lessonId).delete();
+            loadTeacherData();
+        }
+
+        async function toggleAttendance(lessonId, studentId, currentState) {
+            await db.collection('lessons').doc(lessonId).update({
+                [`attendance.${studentId}.present`]: !currentState
+            });
+            loadTeacherData();
+        }
+
+        async function loadTeacherData() {
+            const container = document.getElementById('teacher-active-lessons-box');
+            try {
+                const snapshot = await db.collection('lessons').where('status', '==', 'active').get();
+                if (snapshot.empty) {
+                    container.innerHTML = `<p style="color:var(--text-muted); font-size:13px; text-align:center; padding:20px;">${t('noActiveLessons')}</p>`;
+                    return;
+                }
+                container.innerHTML = snapshot.docs.map(doc => {
+                    const l = doc.data();
+                    let attHtml = '';
+                    for (let sId in l.attendance) {
+                        let att = l.attendance[sId];
+                        attHtml += `<div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px dashed var(--border);">
+                            <span style="font-size:13px;">${att.email}</span>
+                            <button class="status-toggle ${att.present ? 'status-present' : 'status-absent'}" onclick="toggleAttendance('${doc.id}', '${sId}', ${att.present})">${att.present ? t('present') : t('absent')}</button>
+                        </div>`;
+                    }
+                    return `<div class="lesson-card-item" style="background:var(--surface-sub);">
+                        <strong>${l.title}</strong> — ${l.topic || ''}
+                        <div style="margin-top:12px;">${l.zoom ? `<a href="${l.zoom}" target="_blank" class="btn-zoom">${t('zoomBtn')}</a>` : ''}</div>
+                        <div style="margin-top:16px;">${attHtml}</div>
+                        <div style="display:flex; gap:12px; margin-top:18px;">
+                            <button class="btn" style="background:var(--success); margin:0;" onclick="finishLesson('${doc.id}')">${t('finishBtn')}</button>
+                            <button class="btn btn-danger" onclick="deleteLesson('${doc.id}')">${t('deleteBtn')}</button>
+                        </div>
+                    </div>`;
+                }).join('');
+            } catch (e) {
+                container.innerHTML = '<p style="color:var(--danger)">Ошибка загрузки активных уроков</p>';
+            }
+        }
+
+        async function loadTeacherTable() {
+            const container = document.getElementById('teacher-lessons-table-container');
+            const snapshot = await db.collection('lessons').get();
+            if (snapshot.empty) { container.innerHTML = `<p style="padding:20px;">${t('emptyJournal')}</p>`; return; }
+            container.innerHTML = `<table><thead><tr><th>Предмет</th><th>Статус</th></tr></thead><tbody>` +
+                snapshot.docs.map(doc => `<tr><td>${doc.data().title}</td><td>${doc.data().status}</td></tr>`).join('') +
+                `</tbody></table>`;
+        }
+
+        async function loadStudentsTable() {
+            const container = document.getElementById('teacher-students-table-container');
+            const snapshot = await db.collection('users').where('role', '==', 'student').get();
+            if (snapshot.empty) { container.innerHTML = '<p style="padding:20px;">Нет учеников</p>'; return; }
+            container.innerHTML = `<table><thead><tr><th>Email</th></tr></thead><tbody>` +
+                snapshot.docs.map(doc => `<tr><td>${doc.data().email}</td></tr>`).join('') +
+                `</tbody></table>`;
+        }
+
+        function loadLessonsForStudent() {
+            const activeContainer = document.getElementById('student-active-lessons');
+            const archiveContainer = document.getElementById('student-archive-lessons');
+
+            db.collection('lessons').onSnapshot(snapshot => {
+                if (snapshot.empty) {
+                    activeContainer.innerHTML = `<p>${t('emptySchedule')}</p>`;
+                    archiveContainer.innerHTML = `<p>${t('emptyArchive')}</p>`;
+                    return;
+                }
+                let activeHtml = '', archiveHtml = '';
+                snapshot.docs.forEach(doc => {
+                    const l = doc.data();
+                    let videoEmbedHtml = '';
+                    if (l.zoom && l.status === 'active' && (l.zoom.includes('youtube.com') || l.zoom.includes('youtu.be'))) {
+                        let videoId = l.zoom.includes('youtu.be') ? l.zoom.split('/').pop() : l.zoom.split('v=')[1]?.substring(0, 11);
+                        if (videoId) videoEmbedHtml = `<div class="video-container"><iframe src="https://www.youtube.com/embed/${videoId}" allowfullscreen></iframe></div>`;
+                    }
+                    const item = `<div class="lesson-card-item"><h3>${l.title}</h3><p>${l.topic || ''}</p>${videoEmbedHtml}</div>`;
+                    if (l.status === 'finished') archiveHtml += item; else activeHtml += item;
+                });
+                activeContainer.innerHTML = activeHtml || `<p>${t('noActiveLessons')}</p>`;
+                archiveContainer.innerHTML = archiveHtml || `<p>Архив пуст</p>`;
+            });
+        }
+    </script>
+</body>
+</html>
